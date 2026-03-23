@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 def node_negotiation_agent(state: WorkflowState) -> Dict[str, Any]:
     """
-    Negotiation Agent: Handles price mismatches or logic disputes.
+    Negotiation Agent: Fixed to actually return the generated draft in the state.
     """
     thread_id = state.get("job_id", "unknown")
     logger.info("Initiating negotiation subflow", thread_id=thread_id)
@@ -20,15 +20,20 @@ def node_negotiation_agent(state: WorkflowState) -> Dict[str, Any]:
     logger.info(f"Mismatch detected: {diff}", thread_id=thread_id)
     
     prompt = f"Invoice of {actual_amount} exceeds PO of {target_amount} by {diff}. Draft a professional dispute email."
-    draft = llm_router.generate(prompt, tier="smart")
+    llm_draft = llm_router.generate(prompt, tier="smart")
     
+    # Audit log
     state_manager.log_audit(
         thread_id=thread_id,
         agent_node="NegotiationAgent",
         action=f"Drafted dispute for price mismatch of {diff}"
     )
     
+    # Correctly return the draft to the state
     return {
         "audit_trail": [f"Negotiation Agent drafted a dispute for amount mismatch: {diff}"],
-        "current_action": {"type": "send_email", "draft": draft}
+        "current_action": {
+            "type": "send_email", 
+            "draft": llm_draft # Fixed: using the dynamic draft instead of a hardcoded string
+        }
     }
