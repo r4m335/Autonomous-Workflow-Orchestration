@@ -141,7 +141,10 @@
 <body>
     <nav>
         <h1>Digital Worker <span style="color: var(--primary);">/ Dashboard</span></h1>
-        <div class="status-badge">System Online</div>
+        <div style="display:flex; align-items:center; gap: 1.5rem">
+            <a href="/docs" target="_blank" style="color: var(--text); text-decoration: none; font-size: 0.875rem; font-weight: 600; opacity: 0.8">API Docs ↗</a>
+            <div class="status-badge">System Online</div>
+        </div>
     </nav>
 
     <div class="container">
@@ -173,7 +176,8 @@
 
             <div class="card">
                 <h3>Active Thread Status</h3>
-                <div id="threadInfo">No active thread selected.</div>
+                <label for="threadId">Current Thread ID</label>
+                <input type="text" id="threadId" readonly placeholder="No active thread..." style="margin-bottom: 1rem">
                 <div class="logs" id="auditTrail">Waiting for execution...</div>
             </div>
         </div>
@@ -192,7 +196,7 @@
                     method: 'POST'
                 });
                 const data = await response.json();
-                document.getElementById('threadInfo').innerText = `Thread ID: ${data.thread_id}`;
+                document.getElementById('threadId').value = data.thread_id;
                 
                 // Poll for updates
                 pollStatus(data.thread_id);

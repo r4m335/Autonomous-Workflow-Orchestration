@@ -1,0 +1,82 @@
+/* Premium Swagger Dark Theme */
+body {
+    background-color: #0f172a !important;
+    color: #f3f4f6 !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+.swagger-ui .topbar {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.swagger-ui .info .title, .swagger-ui .info p, .swagger-ui .opblock-tag {
+    color: #f3f4f6 !important;
+}
+
+.swagger-ui .opblock {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.swagger-ui .opblock.opblock-post {
+    border-color: #4f46e5 !important;
+    background: rgba(79, 70, 229, 0.05) !important;
+}
+
+.swagger-ui .opblock.opblock-get {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.05) !important;
+}
+
+.swagger-ui .opblock-summary-method {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+}
+
+.swagger-ui section.models {
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.swagger-ui .model-box {
+    background: rgba(0, 0, 0, 0.2) !important;
+    color: #94a3b8 !important;
+}
+
+.swagger-ui input[type=text], .swagger-ui textarea {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+}
+
+.swagger-ui .btn.execute {
+    background-color: #4f46e5 !important;
+    border-color: #4f46e5 !important;
+    color: #fff !important;
+    transition: all 0.2s;
+}
+
+.swagger-ui .btn.execute:hover {
+    filter: brightness(1.2);
+    transform: translateY(-1px);
+}
+
+/* Visualization Tweaks */
+.swagger-ui .responses-table {
+    background: transparent !important;
+}
+
+.swagger-ui .response-col_status, .swagger-ui .response-col_description {
+    color: #cbd5e1 !important;
+}
+
+.swagger-ui code {
+    color: #10b981 !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+}
