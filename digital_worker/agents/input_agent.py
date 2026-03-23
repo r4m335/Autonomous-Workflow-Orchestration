@@ -1,31 +1,24 @@
 from core.models import WorkflowState
-from agents.llm_router import llm_router
-from core.state_manager import state_manager
-import json
+from core.config import settings
+from core.logger import logger
+from typing import Dict, Any
 
-def node_input_agent(state: WorkflowState) -> WorkflowState:
+def node_input_agent(state: WorkflowState) -> Dict[str, Any]:
     """
-    Input Agent: Parses emails, PDFs, attachments using OCR + semantic extraction.
+    Input Agent: Normalizes messy data into structured schema.
     """
-    print("--- [Input Agent] Processing Input ---")
+    thread_id = state.get("job_id", "unknown")
     raw_input = state.get("raw_input", "")
     
-    # Simulate Tesseract OCR + Layout models if PDF, 
-    # Use cheap LLM to parse text into normalized JSON schema
-    llm_output = llm_router.generate(f"Parse this into JSON schema: {raw_input}", tier="cheap")
+    logger.info("Normalizing raw ingestion payload", thread_id=thread_id)
     
-    # In a real system, we parse JSON strictly here
-    try:
-        normalized_data = {"vendor_name": "Acme Corp", "amount": 1250.0} # Simulated fallback
-    except json.JSONDecodeError:
-        normalized_data = {}
+    # Simulation: Extracting basic details from messy text
+    # In production, this would use OCR/LLM
+    norm_data = {"vendor_name": "Acme Corp", "amount": 1250.0}
+    
+    if "1250" in raw_input:
+        norm_data["amount"] = 1250.0
         
-    # Log Audit
-    state_manager.log_audit(
-        thread_id=state.get("job_id", "unknown"),
-        agent_node="InputAgent",
-        action="Parsed raw input into normalized schema"
-    )
-
-    # Return the dictionary of state updates
-    return {"normalized_data": normalized_data}
+    logger.info(f"Targeting tenant: {settings.default_tenant}", thread_id=thread_id)
+        
+    return {"normalized_data": norm_data}

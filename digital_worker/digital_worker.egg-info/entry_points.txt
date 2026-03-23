@@ -1,0 +1,2 @@
+[console_scripts]
+digital-worker = api.main:main

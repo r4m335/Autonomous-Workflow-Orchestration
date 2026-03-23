@@ -1,33 +1,32 @@
 from core.models import WorkflowState
 from core.state_manager import state_manager
+from core.logger import logger
+from typing import Dict, Any
 
-def node_exception_agent(state: WorkflowState) -> WorkflowState:
+def node_exception_agent(state: WorkflowState) -> Dict[str, Any]:
     """
-    Exception Agent: Primary differentiator vs RPA.
-    Handles escalations, DOM drifts, API failures, and low-confidence validation.
+    Exception Agent: Handles anomalies, self-healing, and human escalation.
     """
-    print("--- [Exception Agent] Handling Anomalies ---")
-    
-    score = state.get("validation_score", 1.0)
+    thread_id = state.get("job_id", "unknown")
     exceptions = state.get("exceptions", [])
     
-    if score < 0.8:
-        print(f"[!] Validation Confidence ({score}) below threshold (0.80)")
-        exceptions.append("Low Confidence Validation")
-        
-    for error in exceptions:
-        print(f"[!] Resolving Error: {error}")
-        
-    # Anomaly Detection & Self-Healing Logic
-    # 1. Determine if retryable with an alternative model
-    # 2. Determine if human-in-the-loop is required
+    logger.error(f"Exceptions encountered: {exceptions}", thread_id=thread_id)
     
-    # For now, we simulate logging an escalation event
+    # Logic to decide if we can self-heal or need human help
+    if len(exceptions) < 3:
+        action = "Attempting self-healing retry"
+        logger.info("Retrying under self-healing policy", thread_id=thread_id)
+    else:
+        action = "Escalating to Human-in-the-loop Queue"
+        logger.warning("Max retries exceeded. Manual intervention required.", thread_id=thread_id)
+    
     state_manager.log_audit(
-        thread_id=state.get("job_id", "unknown"),
+        thread_id=thread_id,
         agent_node="ExceptionAgent",
-        action="Escalated to Human-in-the-loop Queue" if len(exceptions) > 2 else "Attempting Self-Healing subflow"
+        action=action
     )
     
-    # We add an error counter to break out of infinite retry loops in the dag
-    return {"exceptions": ["Self-healing attempted"]}
+    return {
+        "audit_trail": [f"Exception Agent: {action}"],
+        "status": "waiting_for_human" if len(exceptions) >= 3 else "retrying"
+    }

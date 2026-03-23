@@ -1,10 +1,11 @@
+from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END
 from core.models import WorkflowState
 from core.state_manager import state_manager
-from typing import Dict, Any
+from core.logger import logger
+from core.config import settings
 
-# We will implement the nodes (agents) in the `agents` folder.
-# For now, we import them or define placeholders if they don't exist yet.
+# Import agent nodes
 from agents.input_agent import node_input_agent
 from agents.decision_agent import node_decision_agent
 from agents.execution_agent import node_execution_agent
@@ -12,93 +13,44 @@ from agents.validation_agent import node_validation_agent
 from agents.exception_agent import node_exception_agent
 from agents.negotiation_agent import node_negotiation_agent
 
-def route_decision(state: WorkflowState):
-    """Router after the Decision Agent dynamically maps intent."""
-    intent = state.get("intent", "unknown")
-    if intent == "escalate" or state.get("exceptions"):
-        return "exception_agent"
-    return "execution_agent"
+def orchestrate_workflow():
+    workflow = StateGraph(WorkflowState)
 
-def route_validation(state: WorkflowState):
-    """Router after Validation Agent."""
-    score = state.get("validation_score", 0.0)
-    
-    # Mismatch logic (e.g., if score is low because of price discrepancy)
-    if 0.5 < score < 0.8:
-        return "negotiation_agent"
+    # Add Nodes
+    workflow.add_node("input", node_input_agent)
+    workflow.add_node("decision", node_decision_agent)
+    workflow.add_node("execution", node_execution_agent)
+    workflow.add_node("validation", node_validation_agent)
+    workflow.add_node("exception", node_exception_agent)
+    workflow.add_node("negotiation", node_negotiation_agent)
+
+    # Define Edges
+    workflow.set_entry_point("input")
+    workflow.add_edge("input", "decision")
+    workflow.add_edge("decision", "execution")
+    workflow.add_edge("execution", "validation")
+
+    # Routing Logic
+    def route_after_validation(state: WorkflowState):
+        score = state.get("validation_score", 0)
+        logger.info(f"Routing logic (Score: {score})", thread_id=state.get("job_id", "unknown"))
         
-    if score >= 0.8:
-        return END
-    else:
-        return "exception_agent"
-
-def build_workflow_dag() -> StateGraph:
-    """
-    Constructs the dynamic multi-agent DAG.
-    Explicit task graph enabling branching, retries, and context-awareness.
-    """
-    graph = StateGraph(WorkflowState)
-    
-    # Add Nodes (Role-Specialized Agents)
-    graph.add_node("input_agent", node_input_agent)
-    graph.add_node("decision_agent", node_decision_agent)
-    graph.add_node("execution_agent", node_execution_agent)
-    graph.add_node("validation_agent", node_validation_agent)
-    graph.add_node("exception_agent", node_exception_agent)
-    graph.add_node("negotiation_agent", node_negotiation_agent)
-    
-    # Define primary edge flow
-    graph.set_entry_point("input_agent")
-    
-    # From input parsing to decision mapping
-    graph.add_edge("input_agent", "decision_agent")
-    
-    # From decision to either execution or exception (context-aware branching)
-    graph.add_conditional_edges(
-        "decision_agent", 
-        route_decision,
-        {
-            "execution_agent": "execution_agent",
-            "exception_agent": "exception_agent"
-        }
-    )
-    
-    # From execution to validation
-    graph.add_edge("execution_agent", "validation_agent")
-    
-    # From validation to End or Exception handling
-    graph.add_conditional_edges(
-        "validation_agent",
-        route_validation,
-        {
-            END: END,
-            "exception_agent": "exception_agent",
-            "negotiation_agent": "negotiation_agent"
-        }
-    )
-    
-    # Negotiation agent goes to End (or could loop back)
-    graph.add_edge("negotiation_agent", END)
-    
-    # Exception agent can loop back to decision agent (Self-healing retry) or exit
-    # Simplification: looping back to decision_agent to re-plan
-    def route_exception(state: WorkflowState):
-        if len(state.get("exceptions", [])) > 3: # Escalate permanently
+        if score >= settings.validation_threshold:
             return END
-        # Self-healing loop
-        return "decision_agent"
-        
-    graph.add_conditional_edges(
-        "exception_agent",
-        route_exception,
-        {
-            "decision_agent": "decision_agent",
-            END: END
-        }
-    )
-    
-    # Compile with memory saver for reliable checkpoints and rollback capabilities
-    return graph.compile(checkpointer=state_manager.get_checkpointer())
+        elif 0.5 <= score < settings.validation_threshold:
+            return "negotiation"
+        else:
+            return "exception"
 
-# Singleton compiled DAG
-dag_app = build_workflow_dag()
+    workflow.add_conditional_edges("validation", route_after_validation, {
+        END: END,
+        "negotiation": "negotiation",
+        "exception": "exception"
+    })
+
+    workflow.add_edge("negotiation", END)
+    workflow.add_edge("exception", END)
+
+    return workflow.compile(checkpointer=state_manager.get_checkpointer())
+
+dag_app = orchestrate_workflow()

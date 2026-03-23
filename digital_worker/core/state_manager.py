@@ -1,10 +1,8 @@
 import sqlite3
-from typing import Optional
+from typing import Optional, Dict, Any, List
+from datetime import datetime
 from langgraph.checkpoint.memory import MemorySaver
-
-# In a full production environment, this would be `langgraph.checkpoint.sqlite.SqliteSaver`
-# or a PostgresSaver. For this implementation, we will use MemorySaver for rapid
-# prototyping, but structure the manager so it can be swapped.
+from core.config import settings
 
 class StateManager:
     """
@@ -12,8 +10,8 @@ class StateManager:
     Provides methods to retrieve the active checkpointer and interact 
     with the underlying database for audit trails.
     """
-    def __init__(self, db_path: str = "digital_worker_state.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or settings.db_path
         # Use MemorySaver for local dev, can be swapped to SqliteSaver
         self.checkpointer = MemorySaver()
         self._init_audit_db()

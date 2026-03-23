@@ -3,8 +3,9 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 import os
+from core.config import settings
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "digital_worker.db")
+DB_PATH = settings.legacy_db_path
 
 def get_db():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
