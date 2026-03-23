@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+*.db
+*.sqlite3
+
+# Memory store
+chroma_data/
+
+# Local configuration / Screenshots
+*.png
+test_out.txt
+.env
+
+# Environments
+.venv/
+env/
+venv/
+ENV/

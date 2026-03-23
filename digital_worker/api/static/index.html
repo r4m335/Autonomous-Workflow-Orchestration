@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Worker - Control Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #4f46e5;
+            --accent: #10b981;
+            --text: #f3f4f6;
+            --bg: #0f172a;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        nav {
+            padding: 1.5rem 3rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .container {
+            flex: 1;
+            padding: 2rem 3rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .graph-area {
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            border-radius: 0.75rem;
+            overflow: auto;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn:hover {
+            filter: brightness(1.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        input, textarea {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            font-family: inherit;
+        }
+
+        .logs {
+            font-family: monospace;
+            font-size: 0.8125rem;
+            background: rgba(0,0,0,0.4);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            height: 200px;
+            overflow-y: auto;
+            color: #10b981;
+        }
+
+        .status-badge {
+            background: var(--accent);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h1>Digital Worker <span style="color: var(--primary);">/ Dashboard</span></h1>
+        <div class="status-badge">System Online</div>
+    </nav>
+
+    <div class="container">
+        <!-- Visualizer Area -->
+        <div class="card">
+            <h2 style="margin-top:0">Workflow Visualization</h2>
+            <div id="graph" class="mermaid graph-area">
+                graph TD
+                    A[Input Agent] --> B[Decision Agent]
+                    B --> C[Execution Agent]
+                    C --> D[Validation Agent]
+                    D -->|Success| END
+                    D -->|Anomaly| E[Exception Agent]
+                    E --> B
+            </div>
+        </div>
+
+        <!-- Controls Area -->
+        <div class="controls">
+            <div class="card">
+                <h3>Trigger Workflow</h3>
+                <label for="rawInput">Input Prompt (Messy Data)</label>
+                <textarea id="rawInput" rows="4">FWD: Process this invoice from Acme Corp for $1250. Missing date field.</textarea>
+                <div style="display:flex; gap: 0.5rem; margin-top: 1rem">
+                    <button class="btn" onclick="executeWorkflow()">Execute Live</button>
+                    <button class="btn btn-outline" onclick="executeWorkflow(true)">Dry Run</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Active Thread Status</h3>
+                <div id="threadInfo">No active thread selected.</div>
+                <div class="logs" id="auditTrail">Waiting for execution...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+        async function executeWorkflow(isDryRun = false) {
+            const input = document.getElementById('rawInput').value;
+            const logArea = document.getElementById('auditTrail');
+            logArea.innerText = "Initializing DAG...\n";
+
+            try {
+                const response = await fetch(`/dashboard/execute?raw_input=${encodeURIComponent(input)}&is_dry_run=${isDryRun}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                document.getElementById('threadInfo').innerText = `Thread ID: ${data.thread_id}`;
+                
+                // Poll for updates
+                pollStatus(data.thread_id);
+            } catch (err) {
+                logArea.innerText += `Error: ${err}\n`;
+            }
+        }
+
+        async function pollStatus(threadId) {
+            const logArea = document.getElementById('auditTrail');
+            const interval = setInterval(async () => {
+                const response = await fetch(`/dashboard/status/${threadId}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const state = data.state;
+                    logArea.innerText = "";
+                    (state.audit_trail || []).forEach(log => {
+                        logArea.innerText += `> ${log}\n`;
+                    });
+                    
+                    if (state.exceptions && state.exceptions.length > 0) {
+                        logArea.innerText += `\n[!] EXCEPTIONS: ${state.exceptions.join(', ')}\n`;
+                    }
+                    
+                    // Simple logic to stop polling: if validation score exists or exceptions stabilized
+                    // In real app we would check 'end' node
+                }
+            }, 2000);
+            
+            // Auto stop after 20s for demo
+            setTimeout(() => clearInterval(interval), 20000);
+        }
+    </script>
+</body>
+</html>

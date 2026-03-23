@@ -1,0 +1,40 @@
+{
+    "workflow_name": "invoice_processing",
+    "description": "Extracts data from an invoice and enters it into a CRM simulator.",
+    "version": "1.0",
+    "steps": [
+        {
+            "step_name": "extract_invoice",
+            "agent_type": "extraction",
+            "action": "parse_pdf",
+            "next": "enter_crm",
+            "config": {
+                "expected_fields": ["vendor_name", "total_amount", "invoice_date"],
+                "model": "gpt-4o-mini"
+            }
+        },
+        {
+            "step_name": "enter_crm",
+            "agent_type": "browser",
+            "action": "fill_form",
+            "next": "send_notification",
+            "config": {
+                "url": "https://httpbin.org/forms/post",
+                "form_mapping": {
+                    "custname": "vendor_name",
+                    "custtel": "total_amount",
+                    "custemail": "invoice_date"
+                }
+            }
+        },
+        {
+            "step_name": "send_notification",
+            "agent_type": "reporting",
+            "action": "notify",
+            "next": null,
+            "config": {
+                "message_template": "Invoice from {vendor_name} for ${total_amount} processed successfully."
+            }
+        }
+    ]
+}
